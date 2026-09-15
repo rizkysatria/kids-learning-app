@@ -26,15 +26,27 @@ const labels: Record<string, string> = {
   logic: "🧩 Logika"
 };
 
+function shuffle<T>(items: T[]): T[] {
+  const result = [...items];
+
+  for (let i = result.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [result[i], result[j]] = [result[j], result[i]];
+  }
+
+  return result;
+}
+
 export default function LearningClient({ subject, activities }: { subject: string; activities: Activity[] }) {
+  const [randomActivities] = useState(() => shuffle(activities));
   const [index, setIndex] = useState(0);
   const [result, setResult] = useState<"correct" | "wrong" | null>(null);
   const [score, setScore] = useState(0);
   const [busy, setBusy] = useState(false);
-  const [audioReady, setAudioReady] = useState(false);
+  const [audioReady, setAudioReady] = useState(false);  
   const [started, setStarted] = useState(false);
 
-  const activity = activities[index];
+  const activity = randomActivities[index];
 
   useEffect(() => {
     setResult(null);
@@ -65,21 +77,28 @@ export default function LearningClient({ subject, activities }: { subject: strin
   }
 
   async function answer(value: string) {
-    if (busy || result || !activity) return;
+    if (busy || result === "correct" || !activity) return;
+
     setBusy(true);
+
     const correct = value === activity.data.answer;
     setResult(correct ? "correct" : "wrong");
+
     if (correct) {
       setScore(s => s + 1);
       speak("Hebat! Jawabanmu benar.");
     } else {
-      speak(`Coba lagi. Jawaban yang benar adalah ${activity.data.answer}.`);
+      speak("Jawabanmu salah, Coba lagi.");
     }
 
     await fetch("/api/attempts", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ activityId: activity.id, correct, answer: value })
+      body: JSON.stringify({
+        activityId: activity.id,
+        correct,
+        answer: value
+      })
     }).catch(() => {});
 
     setBusy(false);
@@ -91,19 +110,20 @@ export default function LearningClient({ subject, activities }: { subject: strin
 
     // speak() is called directly from the user's click to satisfy
     // browser autoplay policies.
-    speak(activity.data.speak);
+    // speak(activity.data.speak);
   }
 
   function next() {
-    const nextIndex = index < activities.length - 1 ? index + 1 : 0;
-    const nextActivity = activities[nextIndex];
+    const nextIndex =
+      index < randomActivities.length - 1 ? index + 1 : 0;
+
+    const nextActivity = randomActivities[nextIndex];
+
     setIndex(nextIndex);
 
-    // The Lanjut button is also a user gesture, so the next question
-    // can be spoken immediately without using setTimeout/useEffect.
     if (nextActivity) {
-      speak(nextActivity.data.speak);
-    }
+      // speak(nextActivity.data.speak);
+    }   
   }
 
   if (!activity) return <main className="shell"><h1>Belum ada aktivitas.</h1></main>;
@@ -135,8 +155,8 @@ export default function LearningClient({ subject, activities }: { subject: strin
         </section>
       ) : (
       <section className="lesson">
-        <div className="progress"><div style={{ width: `${((index + 1) / activities.length) * 100}%` }} /></div>
-        <p className="eyebrow">{index + 1} / {activities.length} · Level {activity.difficulty}</p>
+        <div className="progress"><div style={{ width: `${((index + 1) / randomActivities.length) * 100}%` }} /></div>
+        <p className="eyebrow">{index + 1} / {randomActivities.length} · Level {activity.difficulty}</p>
         <h1>{activity.title}</h1>
         <button className="speak" onClick={() => speak(activity.data.speak)} disabled={!audioReady}>🔊 Dengarkan</button>
         <p className="instruction">{activity.instruction}</p>
@@ -171,9 +191,11 @@ export default function LearningClient({ subject, activities }: { subject: strin
           {activity.data.options.map(option => (
             <button
               key={option}
-              className={`option ${result && option === activity.data.answer ? "answer" : ""}`}
+              className={`option ${
+                result === "correct" && option === activity.data.answer ? "answer" : ""
+              }`}
               onClick={() => answer(option)}
-              disabled={!!result}
+              disabled={result === "correct" || busy}
             >
               {option}
             </button>
@@ -181,10 +203,22 @@ export default function LearningClient({ subject, activities }: { subject: strin
         </div>
 
         {result && (
-          <div className={`feedback ${result}`}>
-            <strong>{result === "correct" ? "🎉 Hebat!" : "💡 Coba lagi!"}</strong>
-            <span>{result === "correct" ? "Jawabanmu benar." : `Jawaban yang benar: ${activity.data.answer}`}</span>
-            <button className="next" onClick={next}>Lanjut ▶</button>
+           <div className={`feedback ${result}`}>
+            <strong>
+              {result === "correct" ? "🎉 Hebat!" : "💡 Coba lagi!"}
+            </strong>
+
+            <span>
+              {result === "correct"
+                ? "Jawabanmu benar."
+                : "Belum tepat. Coba pilih lagi ya."}
+            </span>
+
+            {result === "correct" && (
+              <button className="next" onClick={next}>
+                Lanjut ▶
+              </button>
+            )}
           </div>
         )}
       </section>

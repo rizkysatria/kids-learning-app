@@ -43,238 +43,157 @@ const activities: ActivitySeed[] = [
     data: { visual: "B", options: ["A", "B", "D"], answer: "B", speak: "Ini huruf B." }
   },
   {
-    id: "read-syllable-ba", subject: "reading", title: "Bunyi Suku Kata", instruction: "Pilih BA", type: "choice", difficulty: 2,
+    id: "read-syllable-ba", subject: "reading", title: "Bunyi Suku Kata", instruction: "Pilih BA", type: "choice", difficulty: 1,
     data: { visual: "BA", options: ["BA", "BI", "BU"], answer: "BA", speak: "BA. B... A... BA." }
   },
   {
-    id: "read-word-bola", subject: "reading", title: "Kata Sederhana", instruction: "Pilih kata BOLA", type: "choice", difficulty: 3,
+    id: "read-word-bola", subject: "reading", title: "Kata Sederhana", instruction: "Pilih kata BOLA", type: "choice", difficulty: 1,
     data: { visual: "⚽", options: ["BOLA", "BUKU", "BEBEK"], answer: "BOLA", speak: "Bola." }
   },
   {
-    id: "logic-different", subject: "logic", title: "Yang Berbeda", instruction: "Mana yang berbeda?", type: "choice", difficulty: 2,
+    id: "logic-different", subject: "logic", title: "Yang Berbeda", instruction: "Mana yang berbeda?", type: "choice", difficulty: 1,
     data: { visual: "🐶 🐶 🐱 🐶", options: ["🐶", "🐱", "🐰"], answer: "🐱", speak: "Kucing berbeda dari yang lain." }
   },
   {
-    id: "logic-sequence", subject: "logic", title: "Urutan", instruction: "Apa yang melanjutkan pola?", type: "choice", difficulty: 3,
+    id: "logic-sequence", subject: "logic", title: "Urutan", instruction: "Apa yang melanjutkan pola?", type: "choice", difficulty: 1,
     data: { visual: "🟦 🟦 🟨 🟦 🟦 ❓", options: ["🟦", "🟨", "🟥"], answer: "🟨", speak: "Setelah dua kotak biru, muncul kotak kuning." }
   }
 ];
 
+function randomInt(min: number, max: number): number {
+  return Math.floor(Math.random() * (max - min + 1)) + min;
+}
+
+function randomItem<T>(items: T[]): T {
+  return items[Math.floor(Math.random() * items.length)];
+}
+
+function shuffle<T>(items: T[]): T[] {
+  return [...items].sort(() => Math.random() - 0.5);
+}
+
 function choices(answer: number, max = 10): string[] {
   const candidates = new Set<number>([answer]);
-  const offsets = [-2, -1, 1, 2, 3, -3];
-  for (const offset of offsets) {
-    const value = answer + offset;
-    if (value >= 0 && value <= max && candidates.size < 3) candidates.add(value);
-  }
-  let next = 0;
-  while (candidates.size < 3) {
-    if (!candidates.has(next) && next <= max) candidates.add(next);
-    next++;
-  }
-  return [...candidates].slice(0, 3).map(String);
+  while (candidates.size < 3) candidates.add(randomInt(0, max));
+  return shuffle([...candidates]).map(String);
 }
 
 function visualObjects(object: string, count: number): string {
   return Array.from({ length: count }, () => object).join(" ");
 }
 
-function addQuestion(n: number, difficulty: number, a: number, b: number, object: string, title = "Tambah Benda") {
-  const answer = a + b;
-  activities.push({
-    id: `math-add-${String(n).padStart(3, "0")}`,
-    subject: "math",
-    title,
-    instruction: "Hitung semua benda. Berapa jumlahnya?",
-    type: "visual_addition",
-    difficulty,
-    data: {
-      left: { object, count: a }, right: { object, count: b },
-      options: choices(answer, 15), answer: String(answer),
-      speak: `${a} ditambah ${b}. Berapa jumlahnya?`
-    }
-  });
-}
+let countId = 1, addId = 1, subtractId = 1, compareId = 1;
+let missingId = 1, patternId = 1, sequenceId = 1;
 
-function subtractQuestion(n: number, difficulty: number, total: number, take: number, object: string) {
-  const answer = total - take;
-  activities.push({
-    id: `math-sub-${String(n).padStart(3, "0")}`,
-    subject: "math",
-    title: "Kurangi Benda",
-    instruction: "Ada beberapa benda. Jika sebagian diambil, berapa sisanya?",
-    type: "visual_subtraction",
-    difficulty,
-    data: {
-      left: { object, count: total }, removed: take,
-      options: choices(answer, 12), answer: String(answer),
-      speak: `${total} dikurangi ${take}. Berapa sisanya?`
-    }
-  });
-}
-
-function countQuestion(n: number, difficulty: number, count: number, object: LearningObject) {
+function countQuestion() {
+  const object = randomItem(learningObjects);
+  const count = randomInt(2, 10);
   const question = `Ada berapa ${object.name}?`;
-
   activities.push({
-    id: `math-count-${String(n).padStart(3, "0")}`,
-    subject: "math",
-    title: `Hitung ${object.name}`,
-    instruction: question,
-    type: "visual_count",
-    difficulty,
-    data: {
-      visual: visualObjects(object.visual, count),
-      options: choices(count, 12),
-      answer: String(count),
-      speak: `${question} Hitung pelan-pelan.`,
-      objectId: object.id,
-    }
+    id: `math-count-${String(countId++).padStart(3, "0")}`,
+    subject: "math", title: `Hitung ${object.name}`, instruction: question,
+    type: "visual_count", difficulty: 1,
+    data: { visual: visualObjects(object.visual, count), options: choices(count, 12), answer: String(count), speak: `${question} Hitung pelan-pelan.`, objectId: object.id }
   });
 }
 
-function comparisonQuestion(n: number, difficulty: number, a: number, b: number, left: string, right: string) {
-  const answer = a > b ? "left" : a < b ? "right" : "equal";
-  const answerLabel = answer === "left" ? "Kiri" : answer === "right" ? "Kanan" : "Sama";
+function addQuestion() {
+  let a = randomInt(1, 5), b = randomInt(1, 5);
+  while (a + b > 10) { a = randomInt(1, 5); b = randomInt(1, 5); }
+  const object = randomItem(learningObjects), answer = a + b;
   activities.push({
-    id: `math-compare-${String(n).padStart(3, "0")}`,
-    subject: "math",
-    title: "Mana Lebih Banyak?",
-    instruction: "Pilih kelompok yang lebih banyak.",
-    type: "visual_compare",
-    difficulty,
-    data: {
-      left: { object: left, count: a }, right: { object: right, count: b },
-      options: ["Kiri", "Kanan", "Sama"], answer: answerLabel,
-      speak: "Lihat kedua kelompok. Mana yang lebih banyak?"
-    }
+    id: `math-add-${String(addId++).padStart(3, "0")}`,
+    subject: "math", title: "Tambah Benda", instruction: "Hitung semua benda. Berapa jumlahnya?",
+    type: "visual_addition", difficulty: 1,
+    data: { left: { object: object.visual, count: a }, right: { object: object.visual, count: b }, options: choices(answer, 12), answer: String(answer), speak: `${a} ditambah ${b}. Berapa jumlahnya?` }
   });
 }
 
-function patternQuestion(n: number, difficulty: number, sequence: string[], answer: string, speak: string) {
+function subtractQuestion() {
+  const total = randomInt(2, 10), take = randomInt(1, total - 1);
+  const object = randomItem(learningObjects), answer = total - take;
   activities.push({
-    id: `math-pattern-${String(n).padStart(3, "0")}`,
-    subject: "math",
-    title: "Lanjutkan Pola",
-    instruction: "Apa yang datang berikutnya?",
-    type: "pattern",
-    difficulty,
-    data: { visual: `${sequence.join(" ")} ❓`, options: [answer, sequence[0], sequence[1]].filter((v, i, a) => a.indexOf(v) === i).slice(0, 3), answer, speak }
+    id: `math-sub-${String(subtractId++).padStart(3, "0")}`,
+    subject: "math", title: `Kurangi ${object.name}`,
+    instruction: `Ada ${total} ${object.name}. Jika ${take} diambil, berapa sisanya?`,
+    type: "visual_subtraction", difficulty: 1,
+    data: { left: { object: object.visual, count: total }, removed: take, options: choices(answer, 10), answer: String(answer), speak: `${total} dikurangi ${take}. Berapa sisanya?` }
   });
 }
 
-function missingNumberQuestion(n: number, difficulty: number, expression: string, answer: number, speak: string) {
+function comparisonQuestion() {
+  const leftObject = randomItem(learningObjects);
+  let rightObject = randomItem(learningObjects);
+  while (rightObject.id === leftObject.id) rightObject = randomItem(learningObjects);
+  const a = randomInt(1, 10), b = randomInt(1, 10);
+  const answer = a > b ? "Kiri" : a < b ? "Kanan" : "Sama";
   activities.push({
-    id: `math-missing-${String(n).padStart(3, "0")}`,
-    subject: "math",
-    title: "Angka yang Hilang",
-    instruction: "Pilih angka yang hilang.",
-    type: "choice",
-    difficulty,
-    data: { visual: expression, options: choices(answer, 12), answer: String(answer), speak }
+    id: `math-compare-${String(compareId++).padStart(3, "0")}`,
+    subject: "math", title: "Mana Lebih Banyak?", instruction: "Pilih kelompok yang lebih banyak.",
+    type: "visual_compare", difficulty: 1,
+    data: { left: { object: leftObject.visual, count: a }, right: { object: rightObject.visual, count: b }, options: ["Kiri", "Kanan", "Sama"], answer, speak: `Lihat kedua kelompok. ${a} di kiri dan ${b} di kanan. Mana yang lebih banyak?` }
   });
 }
 
-function sequenceQuestion(n: number, difficulty: number, sequence: number[], answer: number, speak: string) {
+function missingNumberQuestion() {
+  const mode = randomInt(0, 2);
+  let expression: string, answer: number, speak: string;
+  if (mode === 0) {
+    const a = randomInt(1, 5), b = randomInt(1, 5);
+    expression = `${a} + ? = ${a + b}`; answer = b; speak = `${a} ditambah berapa menjadi ${a + b}?`;
+  } else if (mode === 1) {
+    const b = randomInt(1, 5), value = randomInt(1, 5);
+    expression = `? + ${b} = ${value + b}`; answer = value; speak = `Berapa ditambah ${b} menjadi ${value + b}?`;
+  } else {
+    const answerValue = randomInt(1, 5), take = randomInt(1, 4), total = answerValue + take;
+    expression = `${total} - ? = ${answerValue}`; answer = take; speak = `${total} dikurangi berapa menjadi ${answerValue}?`;
+  }
   activities.push({
-    id: `math-sequence-${String(n).padStart(3, "0")}`,
-    subject: "math",
-    title: "Urutan Angka",
-    instruction: "Angka mana yang berikutnya?",
-    type: "choice",
-    difficulty,
-    data: { visual: `${sequence.join(" , ")} , ?`, options: choices(answer, 20), answer: String(answer), speak }
+    id: `math-missing-${String(missingId++).padStart(3, "0")}`,
+    subject: "math", title: "Angka yang Hilang", instruction: "Pilih angka yang hilang.",
+    type: "choice", difficulty: 1,
+    data: { visual: expression, options: choices(answer, 10), answer: String(answer), speak }
   });
 }
 
-// Level 1–2: number sense and counting.
-countQuestion(1, 1, 2, learningObjects[0]);
-countQuestion(2, 1, 3, learningObjects[1]);
-countQuestion(3, 1, 4, learningObjects[6]);
-countQuestion(4, 1, 5, learningObjects[7]);
-countQuestion(5, 2, 6, learningObjects[2]);
-countQuestion(6, 2, 7, learningObjects[8]);
-countQuestion(7, 2, 8, learningObjects[3]);
-countQuestion(8, 2, 9, learningObjects[9]);
-comparisonQuestion(1, 2, 4, 2, "🍎", "🍊");
-comparisonQuestion(2, 2, 3, 6, "⭐", "🌸");
-comparisonQuestion(3, 2, 5, 5, "🐟", "🦋");
-comparisonQuestion(4, 2, 7, 4, "🍓", "🍐");
+function patternQuestion() {
+  const patterns = [
+    { sequence: ["🔴", "🔵", "🔴", "🔵"], answer: "🔴", speak: "Merah, biru, merah, biru. Apa berikutnya?", distractors: ["🔵", "🟡"] },
+    { sequence: ["⭐", "⭐", "🌸", "⭐", "⭐", "🌸"], answer: "⭐", speak: "Dua bintang lalu satu bunga. Apa berikutnya?", distractors: ["🌸", "🔵"] },
+    { sequence: ["🟢", "🟡", "🟡", "🟢", "🟡", "🟡"], answer: "🟢", speak: "Hijau, dua kuning. Ulangi polanya.", distractors: ["🟡", "🔴"] },
+    { sequence: ["🍎", "🍊", "🍎", "🍊"], answer: "🍎", speak: "Apel dan jeruk bergantian. Apa berikutnya?", distractors: ["🍊", "🍓"] }
+  ];
+  const pattern = randomItem(patterns);
+  activities.push({
+    id: `math-pattern-${String(patternId++).padStart(3, "0")}`,
+    subject: "math", title: "Lanjutkan Pola", instruction: "Apa yang datang berikutnya?",
+    type: "pattern", difficulty: 1,
+    data: { visual: `${pattern.sequence.join(" ")} ❓`, options: shuffle([pattern.answer, ...pattern.distractors]), answer: pattern.answer, speak: pattern.speak }
+  });
+}
 
-// Level 3–4: visual arithmetic.
-addQuestion(1, 3, 1, 2, "🍎");
-addQuestion(2, 3, 2, 2, "🍊");
-addQuestion(3, 3, 3, 2, "🍓");
-addQuestion(4, 3, 4, 1, "⭐");
-addQuestion(5, 3, 3, 3, "🐟");
-addQuestion(6, 4, 4, 3, "🌸");
-addQuestion(7, 4, 5, 2, "🍪");
-addQuestion(8, 4, 5, 3, "🍐");
-addQuestion(9, 4, 6, 2, "🍎");
-addQuestion(10, 4, 4, 4, "⭐");
-subtractQuestion(1, 3, 4, 1, "🍎");
-subtractQuestion(2, 3, 5, 2, "🍊");
-subtractQuestion(3, 4, 6, 2, "🍓");
-subtractQuestion(4, 4, 7, 3, "⭐");
-subtractQuestion(5, 4, 8, 4, "🐟");
-subtractQuestion(6, 4, 9, 3, "🌸");
+function sequenceQuestion() {
+  const mode = randomInt(0, 2);
+  let sequence: number[], answer: number, speak: string;
+  if (mode === 0) {
+    const start = randomInt(1, 5); sequence = [start, start + 1, start + 2]; answer = start + 3; speak = `Angka naik satu-satu. Setelah ${sequence[2]}, angka berapa?`;
+  } else if (mode === 1) {
+    const start = randomInt(1, 4); sequence = [start, start + 2, start + 4]; answer = start + 6; speak = `Angka bertambah dua. Setelah ${sequence[2]}, angka berapa?`;
+  } else {
+    const start = randomInt(5, 10); sequence = [start, start - 1, start - 2]; answer = start - 3; speak = `Angka turun satu-satu. Setelah ${sequence[2]}, angka berapa?`;
+  }
+  activities.push({
+    id: `math-sequence-${String(sequenceId++).padStart(3, "0")}`,
+    subject: "math", title: "Urutan Angka", instruction: "Angka mana yang berikutnya?",
+    type: "choice", difficulty: 1,
+    data: { visual: `${sequence.join(" , ")} , ?`, options: choices(answer, 12), answer: String(answer), speak }
+  });
+}
 
-// Level 5–6: number relations and patterns.
-missingNumberQuestion(1, 5, "2 + ? = 5", 3, "Dua ditambah berapa menjadi lima?");
-missingNumberQuestion(2, 5, "4 + ? = 7", 3, "Empat ditambah berapa menjadi tujuh?");
-missingNumberQuestion(3, 5, "? + 2 = 6", 4, "Berapa ditambah dua menjadi enam?");
-missingNumberQuestion(4, 5, "5 - ? = 3", 2, "Lima dikurangi berapa menjadi tiga?");
-missingNumberQuestion(5, 6, "3 + ? = 8", 5, "Tiga ditambah berapa menjadi delapan?");
-missingNumberQuestion(6, 6, "? - 2 = 5", 7, "Berapa dikurangi dua menjadi lima?");
-patternQuestion(1, 6, ["🔴", "🔵", "🔴", "🔵"], "🔴", "Merah, biru, merah, biru. Apa berikutnya?");
-patternQuestion(2, 6, ["⭐", "⭐", "🌸", "⭐", "⭐", "🌸"], "⭐", "Dua bintang lalu satu bunga. Apa berikutnya?");
-patternQuestion(3, 6, ["🟢", "🟡", "🟡", "🟢", "🟡", "🟡"], "🟢", "Hijau, dua kuning. Ulangi polanya.");
-patternQuestion(4, 6, ["🍎", "🍊", "🍎", "🍊"], "🍎", "Apel dan jeruk bergantian. Apa berikutnya?");
+const mathGenerators = [countQuestion, addQuestion, subtractQuestion, comparisonQuestion, missingNumberQuestion, patternQuestion, sequenceQuestion];
 
-// Level 7–8: sequences, geometry and stronger comparisons.
-sequenceQuestion(1, 7, [1, 2, 3], 4, "Angka naik satu-satu.");
-sequenceQuestion(2, 7, [2, 4, 6], 8, "Angka bertambah dua.");
-sequenceQuestion(3, 7, [5, 6, 7], 8, "Angka naik satu-satu.");
-sequenceQuestion(4, 7, [10, 9, 8], 7, "Angka turun satu-satu.");
-sequenceQuestion(5, 8, [1, 3, 5], 7, "Angka bertambah dua.");
-sequenceQuestion(6, 8, [2, 5, 8], 11, "Angka bertambah tiga.");
-comparisonQuestion(5, 7, 8, 6, "🔵", "🟡");
-comparisonQuestion(6, 8, 9, 9, "🔺", "🟢");
-
-activities.push({
-  id: "math-shape-count-001", subject: "math", title: "Hitung Bentuk", instruction: "Ada berapa segitiga?", type: "choice", difficulty: 7,
-  data: { visual: "🔺 🔺 🔵 🔺 ⭐", options: ["2", "3", "4"], answer: "3", speak: "Hitung semua segitiga." }
-});
-activities.push({
-  id: "math-shape-count-002", subject: "math", title: "Hitung Bentuk", instruction: "Ada berapa lingkaran?", type: "choice", difficulty: 8,
-  data: { visual: "🔵 🔺 🔵 ⭐ 🔵", options: ["2", "3", "4"], answer: "3", speak: "Hitung semua lingkaran." }
-});
-
-// Level 9–10: original olympiad-style visual reasoning.
-activities.push({
-  id: "math-balance-001", subject: "math", title: "Buat Sama", instruction: "Berapa benda yang perlu ditambah di kanan?", type: "visual_compare", difficulty: 9,
-  data: { left: { object: "🍎", count: 5 }, right: { object: "🍎", count: 3 }, options: ["1", "2", "3"], answer: "2", speak: "Kiri punya lima. Kanan punya tiga. Berapa perlu ditambah agar sama?" }
-});
-activities.push({
-  id: "math-balance-002", subject: "math", title: "Buat Sama", instruction: "Berapa benda yang perlu diambil dari kiri?", type: "visual_compare", difficulty: 9,
-  data: { left: { object: "⭐", count: 7 }, right: { object: "⭐", count: 5 }, options: ["1", "2", "3"], answer: "2", speak: "Kiri punya tujuh. Kanan punya lima. Berapa perlu diambil dari kiri agar sama?" }
-});
-activities.push({
-  id: "math-two-step-001", subject: "math", title: "Pikirkan Pelan-Pelan", instruction: "Hitung lalu pilih jawabannya.", type: "choice", difficulty: 10,
-  data: { visual: "🍎🍎🍎 + 🍎🍎  →  ? - 🍎", options: ["3", "4", "5"], answer: "4", speak: "Tiga ditambah dua, lalu kurangi satu. Berapa hasilnya?" }
-});
-activities.push({
-  id: "math-two-step-002", subject: "math", title: "Pikirkan Pelan-Pelan", instruction: "Hitung kelompok pertama, lalu bandingkan.", type: "choice", difficulty: 10,
-  data: { visual: "⭐⭐⭐ + ⭐⭐   vs   🌸🌸🌸🌸", options: ["Kiri", "Kanan", "Sama"], answer: "Kanan", speak: "Tiga ditambah dua sama dengan lima. Mana yang lebih banyak: lima atau empat?" }
-});
-activities.push({
-  id: "math-composition-001", subject: "math", title: "Bentuk Angka", instruction: "Pilih pasangan yang jumlahnya tujuh.", type: "choice", difficulty: 9,
-  data: { visual: "? + ? = 7", options: ["3 + 4", "2 + 2", "5 + 1"], answer: "3 + 4", speak: "Pilih pasangan angka yang jumlahnya tujuh." }
-});
-activities.push({
-  id: "math-composition-002", subject: "math", title: "Bentuk Angka", instruction: "Pilih pasangan yang jumlahnya delapan.", type: "choice", difficulty: 10,
-  data: { visual: "? + ? = 8", options: ["3 + 5", "4 + 3", "2 + 5"], answer: "3 + 5", speak: "Pilih pasangan angka yang jumlahnya delapan." }
-});
+// No level is used here. Every seed creates a fresh random mix of questions.
+for (let i = 0; i < 30; i++) randomItem(mathGenerators)();
 
 async function main() {
   await prisma.attempt.deleteMany();
