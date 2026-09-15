@@ -1,0 +1,31 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = "file:./dev.db"
+}
+
+model Activity {
+  id          String   @id
+  subject     String
+  title       String
+  instruction String
+  type        String
+  difficulty  Int
+  data        String
+  createdAt   DateTime @default(now())
+  attempts    Attempt[]
+}
+
+model Attempt {
+  id         Int      @id @default(autoincrement())
+  activityId String
+  correct    Boolean
+  answer     String
+  createdAt  DateTime @default(now())
+  activity   Activity @relation(fields: [activityId], references: [id], onDelete: Cascade)
+
+  @@index([activityId])
+}
