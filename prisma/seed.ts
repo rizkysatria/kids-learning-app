@@ -12,6 +12,27 @@ type ActivitySeed = {
   data: object;
 };
 
+type LearningObject = {
+  id: string;
+  name: string;
+  visual: string;
+};
+
+const learningObjects: LearningObject[] = [
+  { id: "apple", name: "apel", visual: "🍎" },
+  { id: "orange", name: "jeruk", visual: "🍊" },
+  { id: "strawberry", name: "stroberi", visual: "🍓" },
+  { id: "pear", name: "pir", visual: "🍐" },
+  { id: "lemon", name: "lemon", visual: "🍋" },
+  { id: "watermelon", name: "semangka", visual: "🍉" },
+  { id: "star", name: "bintang", visual: "⭐" },
+  { id: "fish", name: "ikan", visual: "🐟" },
+  { id: "butterfly", name: "kupu-kupu", visual: "🦋" },
+  { id: "flower", name: "bunga", visual: "🌸" },
+  { id: "cookie", name: "kue", visual: "🍪" },
+  { id: "car", name: "mobil", visual: "🚗" },
+];
+
 const activities: ActivitySeed[] = [
   {
     id: "read-letter-a", subject: "reading", title: "Kenal Huruf A", instruction: "Ini huruf apa?", type: "choice", difficulty: 1,
@@ -38,9 +59,6 @@ const activities: ActivitySeed[] = [
     data: { visual: "🟦 🟦 🟨 🟦 🟦 ❓", options: ["🟦", "🟨", "🟥"], answer: "🟨", speak: "Setelah dua kotak biru, muncul kotak kuning." }
   }
 ];
-
-const fruits = ["🍎", "🍊", "🍓", "🍐", "🍋", "🍉"];
-const objects = ["⭐", "🐟", "🦋", "🌸", "🍪", "🚗"];
 
 function choices(answer: number, max = 10): string[] {
   const candidates = new Set<number>([answer]);
@@ -95,17 +113,22 @@ function subtractQuestion(n: number, difficulty: number, total: number, take: nu
   });
 }
 
-function countQuestion(n: number, difficulty: number, count: number, object: string) {
+function countQuestion(n: number, difficulty: number, count: number, object: LearningObject) {
+  const question = `Ada berapa ${object.name}?`;
+
   activities.push({
     id: `math-count-${String(n).padStart(3, "0")}`,
     subject: "math",
-    title: "Hitung Benda",
-    instruction: "Ada berapa benda?",
+    title: `Hitung ${object.name}`,
+    instruction: question,
     type: "visual_count",
     difficulty,
     data: {
-      visual: visualObjects(object, count), options: choices(count, 12), answer: String(count),
-      speak: `Ada berapa benda? Hitung pelan-pelan.`
+      visual: visualObjects(object.visual, count),
+      options: choices(count, 12),
+      answer: String(count),
+      speak: `${question} Hitung pelan-pelan.`,
+      objectId: object.id,
     }
   });
 }
@@ -165,14 +188,14 @@ function sequenceQuestion(n: number, difficulty: number, sequence: number[], ans
 }
 
 // Level 1–2: number sense and counting.
-countQuestion(1, 1, 2, fruits[0]);
-countQuestion(2, 1, 3, fruits[1]);
-countQuestion(3, 1, 4, objects[0]);
-countQuestion(4, 1, 5, objects[1]);
-countQuestion(5, 2, 6, fruits[2]);
-countQuestion(6, 2, 7, objects[2]);
-countQuestion(7, 2, 8, fruits[3]);
-countQuestion(8, 2, 9, objects[3]);
+countQuestion(1, 1, 2, learningObjects[0]);
+countQuestion(2, 1, 3, learningObjects[1]);
+countQuestion(3, 1, 4, learningObjects[6]);
+countQuestion(4, 1, 5, learningObjects[7]);
+countQuestion(5, 2, 6, learningObjects[2]);
+countQuestion(6, 2, 7, learningObjects[8]);
+countQuestion(7, 2, 8, learningObjects[3]);
+countQuestion(8, 2, 9, learningObjects[9]);
 comparisonQuestion(1, 2, 4, 2, "🍎", "🍊");
 comparisonQuestion(2, 2, 3, 6, "⭐", "🌸");
 comparisonQuestion(3, 2, 5, 5, "🐟", "🦋");
